@@ -91,7 +91,7 @@ You can convert a Fasta to am FFindex using:
 mmseqs createdb plassProteins.faa plassProteinsDb
 \end{minted}
 
-This generated several files files: a \textit{data} file \texttt{plassProteinsDb} together with an \textit{index} file \texttt{plassProteinsDb.index}. The first file contains all the sequences separated by a null byte \texttt{\textbackslash0}. We coin more generally any data record \textit{an entry}, and each entry has a unique \textit{key} (integer number) that is stored in the \textit{index} file.
+This generated several files files: a \textit{data} file \texttt{plassProteinsDb} together with an \textit{index} file \texttt{plassProteinsDb.index}. The first file contains all the sequences separated by a null byte \texttt{\textbackslash0}. We coin more generally any data record \textit{an entry}, and each entry is associated with a unique \textit{key} (integer number) that is stored in the \textit{index} file.
 
 The corresponding headers are stored in a separate FFindex database with \texttt{\_h} suffix (\texttt{plassProteinsDb\_h}).
 
@@ -111,7 +111,7 @@ Let's re-run the clustering of the catalog database with our fresh FFindex datab
 mmseqs cluster plassProteinsDb plassProteinsReduced\
     --min-seq-id 0.9 -c 0.95 --cov-mode 1 
 \end{minted}
-This creates a \textit{cluster database} where \textbf{each entry has the key of its representative sequence}, and each entry contains the key of its members:
+This creates a \textit{cluster database} where \textbf{each entry has the key of its representative sequence}, and whose data consists of the list of keys of its members:
 \begin{minted}
 {bash}
 # the index file contains entries whose
@@ -119,6 +119,7 @@ This creates a \textit{cluster database} where \textbf{each entry has the key of
 head plassProteinsReduced.index 
 
 # you will see the keys belonging to different clusters
+# (one per line) and such that every cluster is
 # separated by a null byte (shown as a ^@ in vi)
 vi plassProteinsReduced
 \end{minted}
@@ -226,23 +227,23 @@ A full benchmark between the precision and sensitivity is available at \url{TODO
 
 We will see how we can take advantage of the\textbf{ MMSeqs2 modular structure} for creating a workflow (bash script) that calls MMSeqs2 tools to deeply cluster a set of proteins. 
 
-\paragraph{Cascaded clustering} Let's first create a cascaded clustering workflow: after a first clustering step, the representative sequences of each of the clusters are searched against each other and the result of the search is again clustered. By repeating iteratively this procedure, one gets a deeper clustering of the original set.
+\paragraph{Cascaded sequence clustering} Let's first create a cascaded clustering workflow: after a first clustering step, the representative sequences of each of the clusters are searched against each other and the result of the search is again clustered. By repeating iteratively this procedure, one gets a deeper clustering of the original set.
 
 Try to code yourself the following \textit{partial} pseudo-code:
 \begin{minted}
 {bash}
-input="plassProteinsReduced"
+inputdb="plassProteinsReduced"
 for step in 1:maxStep
     # we do not use the cluster mmseqs command as it
     # already is a cascaded workfolw clustering
-    mmseqs search $input $input searchStep$step tmpDir
-    mmseqs clust $input searchStep$step clusteringStep$step
+    mmseqs search $inputdb $inputdb searchStep$step tmpDir
+    mmseqs clust $inputdb searchStep$step clusteringStep$step
     mmseqs result2repseq ...
-    input=...
+    inputdb=...
 done
 
 # Then merge the clustering steps
-mmseqs mergeclusters input deepClusterDB ...
+mmseqs mergeclusters plassProteinsReduced deepClusterDB ...
 
 
 \end{minted}
@@ -313,7 +314,7 @@ Based on the explanation of the Linclust algorithm, try to code its workflow usi
     \item \texttt{clust}
 \end{itemize}
 
-The real Linclust code is slightly more involved as it integrates a redundancy reduction step (the \texttt{pre_clust} prefiltering by high Hamming distance) \url{/home/ubuntu/software/MMseqs2/data/linclust.sh}, and use a trick using \texttt{filterdb --filter-file} to apply the workflow you just built only on the \textit{non-redundant} entries. You can also spot in the end a merging step to recover the redundant part in the final clustering.
+Take a look at the real Linclust workflow in \url{/home/ubuntu/software/MMseqs2/data/linclust.sh}. This version is slightly more involved as it integrates a redundancy reduction step (the \texttt{pre\_clust} prefiltering by high Hamming distance), and uses a trick using \texttt{filterdb} with the flag  \texttt{--filter-file} to apply the workflow you just built \textit{only} on the \textit{non-redundant} entries. You can also spot in the end a merging step to recover the redundant part in the final clustering.
 
 
 \section{Conclusion}
